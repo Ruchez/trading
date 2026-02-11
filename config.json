@@ -1,0 +1,69 @@
+{
+    "account": {
+        "use_env": true
+    },
+    "risk_management": {
+        "max_risk_per_trade_percent": 2.0,
+        "max_total_exposure_percent": 10.0,
+        "daily_loss_limit_percent": 20.0,
+        "cooldown_period_minutes": 60,
+        "be_trigger_atr_multiple": 1.5,
+        "be_buffer_points": 5
+    },
+    "symbols": {
+        "XAUUSD.m": {
+            "enabled": true,
+            "strategies": [
+                "breakout",
+                "mean_reversion",
+                "scalp"
+            ],
+            "lot_size": 0.01,
+            "max_concurrent_trades": 2
+        },
+        "BTCUSD.m": {
+            "enabled": true,
+            "strategies": [
+                "momentum"
+            ],
+            "lot_size": 0.01,
+            "max_trades_per_day": 3
+        },
+        "USDJPY.m": {
+            "enabled": true,
+            "strategies": [
+                "carry_trend"
+            ],
+            "lot_size": 0.01,
+            "max_concurrent_trades": 2
+        },
+        "GBPUSD.m": {
+            "enabled": true,
+            "strategies": [
+                "london_breakout"
+            ],
+            "lot_size": 0.01,
+            "max_concurrent_trades": 2
+        },
+        "NZDUSD.m": {
+            "enabled": true,
+            "strategies": [
+                "commodity_trend"
+            ],
+            "lot_size": 0.1,
+            "max_trades_per_day": 3
+        },
+        "GBPJPY.m": {
+            "enabled": true,
+            "strategies": [
+                "volatility_expansion"
+            ],
+            "lot_size": 0.01,
+            "max_concurrent_trades": 2
+        }
+    },
+    "bridge": {
+        "host": "127.0.0.1",
+        "port": 5555
+    }
+}
