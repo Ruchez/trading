@@ -1,29 +1,34 @@
-# Multi-Instrument Trading Bot (Python + MT5)
+# Institutional Agentic Trading System V4
 
-This bot is a modular system for trading multiple instruments (Gold, BTC, Forex) with a focus on scalping and trend following.
+A professional, deterministic intraday trading system optimized for prop-firm funding and capital preservation.
 
-## Folder Structure
-- `strategies/`: Contains strategy logic (Base class + Scalp implementation).
-- `execution/`: Contains the `MT5Bridge` for interacting with MetaTrader 5.
-- `data/`: Storage for historical or tick data.
-- `logs/`: Application logs.
-- `config.json`: Central configuration file.
-- `main.py`: Main entry point to run the bot.
+## 🏗️ Project Structure
+```text
+Trading/
+├── config/              # Configuration & Security (settings.json, security_vault.py)
+├── docs/                # Comprehensive Manuals (Architecture, Strategy, Risk, Ops)
+├── src/                 # Source Code
+│   ├── bridge/          # MT5 Connection Layer (mt5_interface.py)
+│   ├── core/            # Risk Managers, Portfolio, Validator
+│   ├── comms/           # Telegram Services (Notifier, Command Service)
+│   ├── strategies/      # Trading Logic (Intraday, Scalper)
+│   ├── utils/           # Market Math, DB, Regime Engines
+│   └── main_loop.py     # Execution Heart
+├── launcher.py          # Entry Point
+└── requirements.txt     # Dependencies
+```
 
-## Setup
-1. Open MetaTrader 5 and log into your account (Exness recommended).
-2. Go to `Tools -> Options -> Expert Advisors` and enable "Allow Algorithmic Trading" and "Allow DLL imports".
-3. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Update `config.json` with your account details (if not already logged in).
-5. Run the bot:
-   ```bash
-   python main.py
-   ```
+## 🚀 Quick Start
+1.  Configure your credentials in `.env`.
+2.  Adjust trading parameters in `config/settings.json`.
+3.  Launch the system:
+    ```powershell
+    python launcher.py
+    ```
 
-## Scalping Strategy (implemented)
-- **Timeframe**: M1
-- **Logic**: Uses a combination of price breakouts and RSI momentum to catch quick moves.
-- **Execution**: Sends immediate orders with fixed SL/TP via the Python API.
+## 📚 Documentation
+For detailed technical information, architecture, and operational procedures, please refer to the comprehensive system manual:
+- [System Manual](SYSTEM_MANUAL.md)
+
+---
+*Disclaimer: Trading involves risk. Use this system at your own discretion. Optimized for deterministic execution.*

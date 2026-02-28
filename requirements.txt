@@ -2,3 +2,8 @@ MetaTrader5
 pandas
 numpy
 ta-lib
+aiohttp
+python-dotenv
+requests
+fastapi
+uvicorn

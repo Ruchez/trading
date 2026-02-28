@@ -1,0 +1,57 @@
+{
+    "account": {
+        "use_env": true
+    },
+    "grok_enabled": true,
+    "v5_settings": {
+        "min_confluence_score": 3,
+        "recovery_mode_threshold": 100.0,
+        "focused_symbols": [
+            "XAUUSD.m",
+            "BTCUSD.m",
+            "EURUSD.m",
+            "USDJPY.m",
+            "AUDUSD.m"
+        ]
+    },
+    "risk_management": {
+        "max_risk_per_trade_percent": 1.0,
+        "max_total_exposure_percent": 12.0,
+        "caution_loss_limit_percent": 11.0,
+        "daily_loss_limit_percent": 23.0,
+        "weekly_loss_limit_percent": 30.0,
+        "max_total_drawdown_percent": 40.0,
+        "max_open_risk_percent": 12.0,
+        "max_currency_risk_percent": 8.0,
+        "cooldown_period_minutes": 60,
+        "be_move_threshold_percent": 0.40,
+        "be_buffer_points": 5
+    },
+    "symbols": {
+        "XAUUSD.m": {
+            "enabled": true,
+            "mode": "v5",
+            "max_concurrent_trades": 2
+        },
+        "BTCUSD.m": {
+            "enabled": true,
+            "mode": "v5",
+            "max_concurrent_trades": 1
+        },
+        "EURUSD.m": {
+            "enabled": true,
+            "mode": "v5",
+            "max_concurrent_trades": 2
+        },
+        "USDJPY.m": {
+            "enabled": true,
+            "mode": "v5",
+            "max_concurrent_trades": 2
+        },
+        "AUDUSD.m": {
+            "enabled": true,
+            "mode": "v5",
+            "max_concurrent_trades": 2
+        }
+    }
+}

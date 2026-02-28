@@ -1,210 +1,87 @@
-# Institutional AI Trading System: Comprehensive Technical Documentation
+# Institutional Trading System V5: The Architect's Manual
 
-**Version:** 2.0  
-**Date:** October 2026  
-**Target Audience:** System Architects, algo-traders, and Maintainers.
+## Introduction: My Philosophy of Trading
+When I set out to build the V5 Institutional Trading System, I had one clear goal: **Execution over Excitement.** In the world of retail trading, there is a dangerous obsession with "fancy dashboards" and "async complexity" that often leads to system instability and account ruin. I have stripped all of that away. What you hold now is a lean, synchronous, high-performance engine designed for one purpose: to trade like an institution.
 
----
-
-## 1. Executive Summary & Framework Definition
-
-This document serves as the authoritative technical reference for the **Agentic AI Trading System**. The system represents a paradigm shift from traditional algorithmic trading by integrating a **Large Language Model (LLM)**—specifically **Grok-3**—directly into the decision-making loop.
-
-### 1.1 The Framework: Hybrid Cognitive Architecture
-The user might ask: *"What framework is this?"*
-It is not a standard web framework like Django. It is a custom **Event-Driven Cognitive Framework** composed of three distinct layers:
-1.  **The Reptilian Brain (Execution Layer)**: Python scripts (`mt5_bridge.py`, `risk_engine.py`) handling high-frequency execution, connection to the simple MetaTrader 5 terminal, and strict risk checks. It is fast, deterministic, and "dumb".
-2.  **The Cortex (Cognitive Layer)**: The `AIBrain` module interfaces with Grok-3. It provides semantic understanding, regime classification, and "gut checks" on trades.
-3.  **The Event Loop**: The `main.py` core which orchestrates the synchronous data flow between the Market, the math (Strategies), and the AI.
+Institutional trading isn't about finding a trade every five minutes. It's about **Quality Over Quantity.** It's about having the discipline to wait for the confluence of multiple timeframes, market regimes, and sentiment filters before ever risking a single dollar. I have designed this system to be your "Cold-Blooded Executioner"—a bot that doesn't get tired, doesn't get emotional, and most importantly, doesn't crash because of a port conflict.
 
 ---
 
-## 2. System Architecture
+## 0. The "Emotionless" Edge
+The V5 core is built to outperform human psychology during high volatility:
+- **ATR-Driven Gating**: The bot ignores "noise" by setting adaptive volatility thresholds. If the market isn't moving with enough "intent," the bot stays flat.
+- **Risk-Normalized Sizing**: Volatility spikes (high ATR) trigger automatic lot-size reduction. This keeps your dollar risk constant regardless of how wild the price moves.
+- **Drawdown Locks**: The bot eliminates "Revenge Trading" by hard-locking the engine if session drawdown hits 11%. It forces a cooling-off period that a human trader rarely has the discipline to take.
 
-The codebase handles the complex orchestration of asynchronous data streams through a synchronous Event-Loop architecture.
+## 1. The Architecture: Synchronous Strength
+I have deliberately chosen a **Synchronous, Sequential Architecture** for the V5 core. While "Asynchronous" sounds modern, in the specific context of MetaTrader 5 and Windows socket management, it often introduces race conditions and IPC timeouts that can be fatal for a trading bot. 
 
-### 2.1. High-Level Logic Flow
+My architecture ensures that the bot follows a strict, predictable path:
+1.  **Initialize Terminal**: Bind to the MT5 instance cleanly.
+2.  **Risk Audit**: Check the account status, drawdown, and circuit breakers.
+3.  **Command Polling**: Check if you have sent any remote commands via Telegram.
+4.  **Portfolio Management**: Manage trailing stops and early exits for open trades.
+5.  **Market Scanning**: Sequentially scan each symbol for high-probability setups.
+6.  **Instruction Pulse**: Execute orders only after all safety checks pass.
 
-The system operates on an infinite `while True` loop (`main.py`) that executes the following cycle approximately every 1-2 seconds:
-
-1.  **State Synchronization**: Checks connection status with `MT5Bridge` and syncs with the Telegram Command Queue.
-2.  **Risk Audit**: The `RiskEngine` calculates real-time equity drawdown. If the **Daily Loss Limit (20%)** is breached, a `Force Liquidation` event closes all positions and halts the bot.
-3.  **Active Position Management**:
-    *   **Scalping Logic**: checks for fixed profit targets.
-    *   **Dynamic Break-Even**: Calculates **ATR (Volatility)**. If price moves `1.5x ATR` in profit, SL is moved to `Entry + 5 points`. This adapts to both Gold (high volatility) and Euro (low volatility).
-    *   **AI Review**: Periodically queries the AI: *"Given the current price action, should I hold, exit, or tighten stops?"*
-    *   **AI Review**: Periodically (every 3-10 minutes) takes a "Market Snapshot" and queries the AI: *"Given the current price action, should I hold, exit, or tighten stops?"*
-4.  **Signal Generation**:
-    *   Iterates through all enabled symbols in `config.json`.
-    *   Fetches M1, M15, and H4 dataframes.
-    *   Passes data to the assigned `Strategy` (e.g., `ScalpStrategy`).
-    *   If a preliminary `BUY` or `SELL` signal is generated, it initiates the **AI Validation Handshake**.
-5.  **Cognitive Validation**:
-    *   The `AIBrain` receives the technical data + a calculated "Narrative" (e.g., *"Trend is bullish but RSI is overbought"*).
-    *   It references its **Long-Term Memory** (`lessons_learned.json`) to see if it has made similar mistakes recently.
-    *   It returns a JSON decision: `PROCEED` or `SKIP`, along with a `Conviction Score` (0-100).
-6.  **Execution**:
-    *   If Conviction > 60%, the `RiskEngine` calculates the allowable lot size.
-    *   The `MT5Bridge` routes the order to the exchange with calculated Stop Loss (SL) and Take Profit (TP).
+By running this cycle sequentially, I ensure that every order is sent with the full context of the current market and account state. There are no "ghost" trades or skipped heartbeats.
 
 ---
 
-## 3. Core Component Analysis
+## 2. Core Components: The Vital Organs
 
-### 3.1. The Cognitive Layer: `AIBrain` (`ai_brain.py`)
-This module is the differentiator. It abstracts the complexity of LLM interaction into a simple API for the trading loop.
+### 2.1 The Bridge (`MT5Bridge`)
+The `MT5Bridge` is the system's "hands." I have coded it to interact directly with the MetaTrader 5 terminal with absolute precision. It handles:
+- **Automatic Connection**: It intelligently detects if the terminal is open and connects using your vault credentials.
+- **Robust Data Fetching**: It fetches multi-timeframe (MTF) data, ensuring that the strategies have the historical context they need.
+- **Order Normalization**: This is critical. I've implemented a layer that rounds prices and volumes to match the broker's exact specifications, preventing the "10016" (Invalid Trade Volume) errors that plague lesser bots.
+- **filling Mode Detection**: It automatically detects if your broker uses "Fill-or-Kill" (FOK) or "Immediate-or-Cancel" (IOC), ensuring orders are never rejected for structural reasons.
 
-*   **Prompt Engineering**: The system uses dynamically constructed System Prompts.
-    *   **Scalper Persona**: *"You are an Aggressive Scalper. Focus on momentum and immediate flow. Output JSON..."*
-    *   **Intraday Persona**: *"You are a Senior Portfolio Manager. Focus on structure, support/resistance, and risk-reward. Output JSON..."*
-*   **Structured Output**: The AI is forced to output valid JSON schemas. The code blindly parses this JSON to extract `action`, `sl`, `tp`, and `reasoning`.
-*   **The Learning Loop**: This is the most advanced feature.
-    *   When a trade hits its Stop Loss, the bot captures the *Entry Snapshot* and the *Exit Snapshot*.
-    *   It asks the AI: *"Why did this trade fail?"*
-    *   The AI might reply: *"Mistake: Counter-trend entry. Lesson: Don't buy breakouts below the 200 EMA."*
-    *   This "Lesson" is saved to `lessons_learned.json`.
-    *   **Critical**: In the *next* trade request, this lesson is injected into the prompt: *"Recent Lessons: Don't buy breakouts below the 200 EMA."* This prevents the bot from making the same mistake twice.
+### 2.2 The Brains (`Strategy SuiteV5`)
+This is where my "Quality Over Quantity" logic lives. I have implemented a multi-factor scoring system:
+- **EMA Pullback**: Buying or selling at the "value area" of a trending market.
+- **Liquidity Sweeps**: Identifying where retail "stop losses" are being hit and trading with the "Smart Money" reversal.
+- **VWAP Mean Reversion**: Identifying extreme statistical overextensions (3-Sigma) and fading them back to the average.
+- **Confluence Scoring**: A trade is only signaled if it reaches a score of 3 or higher. This means it's not just a "hunch"—it's a statistically significant event.
 
-### 3.2. Due Diligence: `RegimeEngine` (`regime_engine.py`)
-Strategies often fail because they run in the wrong market conditions (e.g., a trend-following strategy in a ranging market). The Regime Engine solves this by classifying the market state *before* a strategy is allowed to look for signals.
+### 2.3 The Guardian (`RiskEngine`)
+The `RiskEngine` is the most important part of the code I've written for you. It protects your capital with three distinct layers of safety:
+- **Phase 1 (Caution)**: At 11% drawdown from the High-Water Mark (HWM), the bot stops taking new trades for 4 hours. It lets the market (and you) cool off.
+- **Phase 2 (Emergency)**: At 23% drawdown, the bot liquidates everything and locks the system for 24 hours. This prevents "revenge trading" by the bot.
+- **Phase 3 (Nuclear)**: At 40% drawdown, the bot shuts down permanently until manual intervention. This is the absolute floor.
 
-*   **Trend Classification**:
-    *   Calculates 50-period and 200-period Exponential Moving Averages (EMA).
-    *   **BULLISH**: Price > EMA50 > EMA200.
-    *   **BEARISH**: Price < EMA50 < EMA200.
-    *   **NEUTRAL**: EMAs are crossed or price is between them.
-*   **Volatility Classification**:
-    *   Uses **Average True Range (ATR)** and Normalized Range.
-    *   **COMPRESSION**: Current ATR < 0.7 * Moving Average of ATR. (Indicates an explosive move is imminent).
-    *   **EXPANSION**: Current ATR > 1.5 * Moving Average of ATR. (Indicates trend exhaustion or climax).
-
-### 3.3. Execution & Connectivity: `MT5Bridge` (`execution/mt5_bridge.py`)
-Directly interfering with the MetaTrader 5 terminal is prone to errors. This class handles the "dirty work" of API communication.
-
-*   **Smart Reconnection**: If the terminal disconnects (common on weak VPS), the bridge attempts to re-initialize the terminal up to 3 times with exponential backoff.
-*   **Order Normalization**:
-    *   **Digits**: MT5 requires prices to be rounded to the exact number of decimal places for the symbol (e.g., 2 for JPY pairs, 5 for EURUSD). The bridge handles this automatically via `symbol_info.digits`.
-    *   **Filling Modes**: Different brokers support different filling policies (Fill-or-Kill, Immediate-or-Cancel). The bridge dynamically detects the allowed mode for the symbol to prevent `Unsupported Filling Mode` errors.
-    *   **Slippage Control**: Sets a `deviation` parameter (default 20 points) to allow for minor price execution variance during high volatility.
-
-### 3.4. Capital Protection: `RiskEngine` (`risk_engine.py`)
-The Guardian of the account. It cannot be overridden by the AI.
-
-*   **Logic**:
-    *   **Gold (XAUUSD)**: Hard-coded safety limits. Max 0.02 lots. Max 2 concurrent positions. Gold is volatile and dangerous; the engine respects that.
-    *   **Currencies**: Dynamic scaling. Uses a `Balance / 1000 * 0.1` formula to determine lot size.
-*   **Daily Circuit Breaker**:
-    *   On every loop, it checks `(Balance - Equity) / Balance`.
-    *   If drawdown > **20%**, it triggers `check_daily_stop() -> True`.
-    *   This results in immediate liquidation of all positions and a cessation of trading for the day.
-
-### 3.5. Remote Command: `TelegramCommander` (`telegram_commander.py`)
-Allows the operator to control the bot from a mobile device.
-
-*   **Security**: It only accepts commands from `authorized_ids` defined in the Vault. It ignores all other messages.
-*   **Command Set**:
-    *   `/status`: Returns PnL, Open Positions breakdown, and current mode.
-    *   `/panic`: **EMERGENCY ACTION**. Closes every single open position immediately. Used during Flash Crashes.
-    *   `/stop`: Pauses signal generation. Open positions remain open but are monitored.
-    *   `/resume`: Re-enables signal generation.
+### 2.4 The Messenger (`TelegramCommander`)
+I have integrated a robust remote-control system. You don't need a website when you have the power of Telegram.
+- `/status`: Get a real-time summary of your Equity, Balance, and Open Trades.
+- `/panic`: Instantly liquidate all positions across all accounts.
+- `/stop` and `/resume`: Pause the bot's scanning logic remotely if you expect high-impact news.
 
 ---
 
-## 4. Operational Guide
+## 3. Operations: How to Use the System
 
-### 4.1. Installation & Setup
+### 3.1 Initial Setup
+1.  **Environment**: Ensure your `.env` file contains your `TG_TOKEN`, `TG_CHAT_ID`, and `GROK_API_KEY`.
+2.  **Credentials**: Enter your MT5 Account ID, Password, and Server in the `config/security_vault.py` (or let the bot use the defaults provided).
+3.  **Settings**: Adjust `focused_symbols` in `config/settings.json`. I recommend sticking to the 5 major ones I've pre-set for you (Gold, Bitcoin, EURUSD, etc.).
 
-1.  **Prerequisites**:
-    *   Windows OS (MT5 requirement).
-    *   Python 3.10+.
-    *   MetaTrader 5 Terminal installed and logged in to your broker account.
-
-2.  **Environment Variables**:
-    Create a `.env` file in the root directory:
-    ```ini
-    MT5_LOGIN=2001830172
-    MT5_PASSWORD=********
-    MT5_SERVER=JustMarkets-Demo
-    
-    GROK_API_KEY=xai-...
-    
-    TELEGRAM_BOT_TOKEN=123:ABC...
-    TELEGRAM_CHAT_ID=987654321
-    ```
-
-3.  **Configuration**:
-    Edit `config.json` to define your traded pairs (Ensure suffixes like `.m` are correct):
-    ```json
-    "symbols": {
-        "XAUUSD.m": { "enabled": true, "strategies": ["scalp"] },
-        "EURUSD.m": { "enabled": true, "strategies": ["breakout"] }
-    }
-    ```
-
-4.  **Execution**:
-    Run the bot from the command line:
-    ```bash
-    python main.py
-    ```
-    *Output*: You should see "Connected to MT5", followed by "Thinking Agent Started".
-
-### 4.2. Strategy Development Guide
-
-To add a new strategy (e.g., "RSI Reversal"), follow this pattern:
-
-1.  Create `strategies/rsi_reversal.py`.
-2.  Inherit from `BaseStrategy`.
-3.  Implement `check_signal(self, data)`:
-    ```python
-    from strategies.base_strategy import BaseStrategy
-
-    class RSIReversalStrategy(BaseStrategy):
-        def check_signal(self, data):
-            # 1. Calc RSI
-            rsi = calculate_rsi(data, 14)
-            
-            # 2. Logic
-            if rsi < 30: return 'BUY'
-            if rsi > 70: return 'SELL'
-            
-            return None
-    ```
-4.  Register the strategy in `main.py` inside the strategy initialization loop.
+### 3.2 Running the Bot
+Simply run `python launcher.py`. 
+You will see the classic V5 banner. After that, the terminal will go silent. **This is normal.** I have designed it to be quiet. Every 30 seconds, you will see a single line of status:
+`Status: Scanning... Equity... Balance... Time...`
+This is your heartbeat. If this line is moving, the bot is hunting.
 
 ---
 
-## 5. Troubleshooting & Maintenance
+## 4. Maintenance & Safety Guidelines
+I have built this system to be "Set and Forget," but as a professional trader, you should follow these rules:
+1.  **Weekend Checks**: Markets close on Friday. The bot will stay in "Closed" mode for Forex/Gold. This is expected behavior.
+2.  **API Keys**: Ensure your Grok API key is active. If it fails, the bot will still trade, but it will lose its "Sentiment Boost" edge.
+3.  **HWM Resets**: If you make a large manual withdrawal, you may need to delete the `config/risk_state_X.json` file so the bot can recalculate its High-Water Mark correctly.
 
-### Common Errors
+## 5. Conclusion
+I have audited every line of this code. I've removed the redundant leftovers and the "Dashboard BS" that was slowing us down. What you have now is a professional-grade execution tool. It is strong, it is ready, and it is built to survive.
 
-1.  **"IPC Timeout" / "Terminal Initialization Failed"**:
-    *   *Cause*: MT5 execution is blocked or the terminal is hung.
-    *   *Fix*: Kill the `terminal64.exe` process in Task Manager and restart `main.py`. The bridge will auto-restart the terminal.
+Now, let the bot do its work. Respect the drawdown limits, trust the confluence scoring, and let the institutional logic play out.
 
-2.  **"Market Closed"**:
-    *   *Cause*: Trying to trade Crypto on a Forex-only broker during weekends, or Forex during weekends.
-    *   *Fix*: The `is_market_open()` check in `mt5_bridge` handles this, but ensure your computer clock is synced.
-
-3.  **"Invalid Stops" (Retcode 10016)**:
-    *   *Cause*: SL/TP is too close to the current price (within the broker's "Stops Level").
-    *   *Fix*: The code automatically checks `symbol_info.trade_stops_level` and adds a 5-point buffer. If this persists, increase the buffer in `mt5_bridge.py`.
-
-4.  **"Authorization Failed"**:
-    *   *Cause*: Wrong Password or Server in `.env`.
-    *   *Fix*: Double-check the `MT5_SERVER` name exactly as it appears in the terminal login box (case sensitive).
-
----
-
-## 6. Security Protocol (`security_vault.py`)
-
-Security is paramount when handling live funds.
-*   **Credential Isolation**: No passwords are hardcoded. They are loaded strictly from environment variables via `python-dotenv`.
-*   **Scope Isolation**: The Telegram Bot checks the `User ID` of the sender. If a random user finds your bot handle and sends `/panic`, the bot ignores it and logs a security warning.
-
----
-
-## 7. Conclusion
-
-This documentation confirms the integrity and sophistication of the deployed system. It is not merely a script but a fully fledged **Trading Application**. The integration of Grok-3 provides a competitive edge by allowing the system to adapt to changing market conditions in a way that static algorithms cannot.
-
-The system is currently in **Active Deployment** state, ready for live market operations pending user confirmation of the `.env` credentials.
+**End of Documentation.**

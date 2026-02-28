@@ -16,5 +16,19 @@
     "symbol": "XAUUSD",
     "pnl": -150.5,
     "lesson": "Incorporate key resistance levels and high-impact session dynamics (like London Open) into trade planning. Monitor for signs of institutional imbalances or sentiment shifts near critical levels to exit or adjust positions proactively."
+  },
+  {
+    "time": 1770846436.4946425,
+    "type": "LIVE",
+    "symbol": "EURUSD.m",
+    "pnl": -1.65,
+    "lesson": "Always document and adhere to a clear entry strategy based on market analysis, trend direction, and risk-reward ratios. Ensure trades align with the dominant trend or have a strong contrarian setup supported by key levels or indicators. Post-overhaul, implement strict entry rules to avoid ambiguity in trade rationale."
+  },
+  {
+    "time": 1770847638.5304608,
+    "type": "LIVE",
+    "symbol": "EURUSD.m",
+    "pnl": -4.05,
+    "lesson": "Always document and adhere to a clear entry strategy with predefined conditions (e.g., trend alignment, key levels, or indicator confirmation) to avoid entering trades without justification. Ensure alignment between higher and lower timeframes to reduce the risk of counter-trend trades. In a NEUTRAL regime, consider waiting for a stronger directional signal or breakout before entering a position."
   }
 ]
