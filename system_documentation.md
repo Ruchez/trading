@@ -56,6 +56,12 @@ I have integrated a robust remote-control system. You don't need a website when 
 - `/panic`: Instantly liquidate all positions across all accounts.
 - `/stop` and `/resume`: Pause the bot's scanning logic remotely if you expect high-impact news.
 
+### 2.5 The Evolutionary Engine (AI Learning Loop)
+This is the newest addition to the V5 suite. It allows the system to learn from its own history:
+- **Trade Snapshots**: Every entry is recorded with its full technical context (RSI, VWAP, Trend).
+- **AI Post-Mortem**: A specialized engine that uses Grok/Gemini to analyze winning vs. losing patterns.
+- **Strategy Refinement**: The AI suggests specific technical "gates" to eliminate recurring losses.
+
 ---
 
 ## 3. Operations: How to Use the System
