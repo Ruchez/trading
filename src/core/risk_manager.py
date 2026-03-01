@@ -148,15 +148,18 @@ class RiskEngine:
             return True, False, False
 
         # 🟠 PHASE 2: Emergency (23% HWM Drawdown) - Liquidate + 24hr Halt
-        emergency_limit = 23.0 # Tightened from 25.0
-        if hwm_drawdown >= emergency_limit or balance_drawdown >= 30.0:
-            print(f"🚨 [EMERGENCY] 23% Drawdown Hit. Liquidating and locking 24h.")
+        # Special War Room override: 50% Hard Stop
+        is_war_room = self.config.get('mode') == 'WAR_ROOM'
+        emergency_limit = 50.0 if is_war_room else 23.0 
+        
+        if hwm_drawdown >= emergency_limit or balance_drawdown >= emergency_limit:
+            print(f"🚨 [{'WAR ROOM' if is_war_room else 'EMERGENCY'}] {emergency_limit}% Drawdown Hit. Liquidating.")
             self.halt_until = time.time() + 86400 
             self._save_state()
             return True, True, False
 
         # 🔴 PHASE 3: Nuclear (40% Total Drawdown) - Hard Bot Shutdown
-        if balance_drawdown >= 40.0:
+        if balance_drawdown >= 40.0 and not is_war_room:
             print(f"☢️ [NUCLEAR] 40% Total Drawdown Hit. HARD SHUTDOWN.")
             return True, True, True
 

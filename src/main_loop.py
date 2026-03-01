@@ -97,7 +97,7 @@ def run_trading_cycle():
         focused_symbols = config.get('v5_settings', {}).get('focused_symbols', ["XAUUSD.m", "EURUSD.m"])
         strategies = {}
         for symbol in focused_symbols:
-            mode = config.get('symbols', {}).get(symbol, {}).get('mode', 'v5')
+            mode = config.get('symbols', {}).get(symbol, {}).get('mode', config.get('mode', 'v5'))
             strategies[symbol] = get_strategy(mode, symbol, config)
 
         for acc_creds in current_accounts:
@@ -106,42 +106,55 @@ def run_trading_cycle():
             if open_positions:
                 trade_manager.manage_open_positions(open_positions, strategies, regime_engine)
 
-        # 3. SCANNING (Master Account)
+        # 3. SCANNING & EXECUTION
+        # We use the first account as the "Master" for data feed consistency
         if not bridge.switch_account(current_accounts[0]): return
+        
         for symbol, strategy in strategies.items():
             if symbol in last_signal_check and time.time() - last_signal_check[symbol] < 60:
                 continue
             
             # Synchronous data fetching
             mtf_data = {
+                'H4': bridge.get_data(symbol, mt5.TIMEFRAME_H4, 100),
                 'H1': bridge.get_data(symbol, mt5.TIMEFRAME_H1, 100),
                 'M15': bridge.get_data(symbol, mt5.TIMEFRAME_M15, 200),
-                'M1': bridge.get_data(symbol, mt5.TIMEFRAME_M1, 200),
-                'H4': bridge.get_data(symbol, mt5.TIMEFRAME_H4, 100),
                 'M5': bridge.get_data(symbol, mt5.TIMEFRAME_M5, 200)
             }
 
             if any(df.empty for df in mtf_data.values()): continue
 
             regime = regime_engine.classify(mtf_data['M15'])
-            # Sentiment check (Blocking)
+            
+            # Sentiment check
             sentiment_boost = sentiment_engine.get_sentiment_boost(symbol)
             signal, reasoning = strategy.check_signal(mtf_data, sentiment_boost, regime)
             
             if signal:
                 print(f"🎯 SIGNAL: {signal} {symbol}")
+                # Execute for ALL accounts
                 for acc_creds in current_accounts:
                     login = str(acc_creds['login'])
                     if not bridge.switch_account(acc_creds): continue
+                    
                     risk_engine = get_risk_engine(login)
+                    
+                    # Custom War Room Lot Sizing
+                    is_war_room = config.get('mode') == 'WAR_ROOM'
+                    if is_war_room:
+                        lot_size = 0.01 # Fixed for $100 experiment
+                    else:
+                        lot_size = risk_engine.calculate_lot_size(symbol, 1.0, 200)
+                    
                     if not risk_engine.validate_portfolio_risk(symbol, 1.0): continue
                     
                     tick = mt5.symbol_info_tick(symbol)
                     if not tick: continue
                     
                     atr = calculate_atr(mtf_data['M15'])
-                    lot_size = risk_engine.calculate_lot_size(symbol, 1.0, 200)
                     entry = tick.ask if signal == 'BUY' else tick.bid
+                    
+                    # Trailing logic is handled by TradeManager, but SL/TP are initial
                     sl = entry - (atr * 2) if signal == 'BUY' else entry + (atr * 2)
                     tp = entry + (atr * 5) if signal == 'BUY' else entry - (atr * 5)
                     

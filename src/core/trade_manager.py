@@ -82,7 +82,12 @@ class TradeManager:
         # 2. Trail by ATR @ 1.5R+
         if r_multiple >= 1.5:
             atr = calculate_atr(mtf_data['M15'])
-            trail_dist = atr * 1.5 # Trail by 1.5x ATR
+            
+            # War Room Specific: Ultra-tight trailing (0.5x ATR)
+            is_war_room = self.config.get('mode') == 'WAR_ROOM'
+            mult = 0.5 if is_war_room else 1.5
+            
+            trail_dist = atr * mult
             
             new_sl = current - trail_dist if is_buy else current + trail_dist
             
