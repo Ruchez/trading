@@ -10,21 +10,20 @@ if sys.platform.startswith('win'):
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# Add project root and src to sys.path
+# Add archive path to sys.path to run the original V5 institutional logic
 root_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, root_dir)
+archive_path = os.path.join(root_dir, 'archive', 'v5_institutional')
 
-from src.main_loop import load_config
+# Priority pathing: ensure archive takes precedence over root src
+sys.path.insert(0, archive_path)
 
 def banner():
-    config = load_config()
-    focused = config.get('v5_settings', {}).get('focused_symbols', [])
     print("=" * 60)
-    print("      🚀  TRADING SYSTEM NEXT GEN (V6)  🚀")
+    print("      🏛️  [ARCHIVE] INSTITUTIONAL TRADING SYSTEM V5  🏛️")
     print("=" * 60)
     print(f"Project Home: {root_dir}")
-    print(f"Active Pairs: {', '.join(focused)}")
-    print("Mode: Strategy Evolution (New SMC Architecture)")
+    print(f"Archive Path: {archive_path}")
+    print("Mode: Original V5 Logic (Self-Contained Archive)")
     print("-" * 60)
 
 def start():

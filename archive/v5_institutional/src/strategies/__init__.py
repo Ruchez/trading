@@ -1,14 +1,12 @@
 from src.strategies.institutional_v5 import InstitutionalStrategyV5
 from src.strategies.war_room import WarRoomGoldStrategy
 from src.strategies.btc_sell_liquidity import BTCSellLiquidityStrategy
-from src.strategies.smc_strategy_v6 import SMCStrategyV6
 
 STRATEGY_MAP = {
     "v5": InstitutionalStrategyV5,
     "institutional_v5": InstitutionalStrategyV5,
     "war_room": WarRoomGoldStrategy,
-    "btc_sell_liquidity": BTCSellLiquidityStrategy,
-    "smc_v6": SMCStrategyV6
+    "btc_sell_liquidity": BTCSellLiquidityStrategy
 }
 
 def get_strategy(strategy_name, symbol, config):

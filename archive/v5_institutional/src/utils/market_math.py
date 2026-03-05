@@ -20,122 +20,14 @@ def detect_fvg(df):
     A bearish FVG: high of candle 3 < low of candle 1.
     """
     fvg = []
-    if len(df) < 3: return fvg
-    
     for i in range(2, len(df)):
         # Bullish FVG
         if df['low'].iloc[i] > df['high'].iloc[i-2]:
-            fvg.append({
-                'index': i-1, 
-                'type': 'BULLISH', 
-                'top': df['low'].iloc[i], 
-                'bottom': df['high'].iloc[i-2],
-                'time': df['time'].iloc[i-1] if 'time' in df.columns else i-1
-            })
+            fvg.append({'index': i-1, 'type': 'BULLISH', 'top': df['low'].iloc[i], 'bottom': df['high'].iloc[i-2]})
         # Bearish FVG
         elif df['high'].iloc[i] < df['low'].iloc[i-2]:
-            fvg.append({
-                'index': i-1, 
-                'type': 'BEARISH', 
-                'top': df['low'].iloc[i-2], 
-                'bottom': df['high'].iloc[i],
-                'time': df['time'].iloc[i-1] if 'time' in df.columns else i-1
-            })
+            fvg.append({'index': i-1, 'type': 'BEARISH', 'top': df['low'].iloc[i-2], 'bottom': df['high'].iloc[i]})
     return fvg
-
-def detect_order_blocks(df, window=20):
-    """
-    Identifies Order Blocks (OB).
-    Bullish OB: The last bearish candle before a strong bullish impulse that breaks structure.
-    Bearish OB: The last bullish candle before a strong bearish impulse that breaks structure.
-    """
-    obs = []
-    if len(df) < window: return obs
-    
-    for i in range(window, len(df) - 1):
-        # Strong Impulse check: Body is significantly larger than average
-        body = abs(df['close'].iloc[i] - df['open'].iloc[i])
-        avg_body = abs(df['close'] - df['open']).iloc[i-window:i].mean()
-        
-        if body > avg_body * 2.5: # 2.5x average body is an "Impulse"
-            is_bullish_impulse = df['close'].iloc[i] > df['open'].iloc[i]
-            
-            # The candle BEFORE the impulse is our OB candidate
-            ob_candle = df.iloc[i-1]
-            
-            if is_bullish_impulse and ob_candle['close'] < ob_candle['open']:
-                # Bullish OB (Bearish candle before bullish impulse)
-                obs.append({
-                    'index': i-1,
-                    'type': 'BULLISH',
-                    'top': ob_candle['high'],
-                    'bottom': ob_candle['low'],
-                    'time': ob_candle['time'] if 'time' in df.columns else i-1
-                })
-            elif not is_bullish_impulse and ob_candle['close'] > ob_candle['open']:
-                # Bearish OB (Bullish candle before bearish impulse)
-                obs.append({
-                    'index': i-1,
-                    'type': 'BEARISH',
-                    'top': ob_candle['high'],
-                    'bottom': ob_candle['low'],
-                    'time': ob_candle['time'] if 'time' in df.columns else i-1
-                })
-    return obs
-
-def determine_trend(df, window=20):
-    """
-    Determines trend based on consistent HH/HL (UP) or LH/LL (DOWN).
-    """
-    if len(df) < window * 2: return 'SIDEWAYS'
-    
-    # Identify local peaks and troughs
-    peaks = []
-    troughs = []
-    
-    for i in range(window, len(df) - window):
-        chunk = df.iloc[i-window:i+window]
-        if df['high'].iloc[i] == chunk['high'].max():
-            peaks.append(df['high'].iloc[i])
-        if df['low'].iloc[i] == chunk['low'].min():
-            troughs.append(df['low'].iloc[i])
-            
-    if len(peaks) < 2 or len(troughs) < 2:
-        return 'SIDEWAYS'
-        
-    last_p = peaks[-1]
-    prev_p = peaks[-2]
-    last_t = troughs[-1]
-    prev_t = troughs[-2]
-    
-    if last_p > prev_p and last_t > prev_t:
-        return 'UPTREND'
-    elif last_p < prev_p and last_t < prev_t:
-        return 'DOWNTREND'
-    
-    return 'SIDEWAYS'
-
-def detect_structure_break(df, window=20):
-    """
-    Identifies BoS (Break of Structure) and CHoCH (Change of Character).
-    - BoS: Break in the direction of the trend (Continuation).
-    - CHoCH: Break against the trend (Reversal).
-    """
-    if len(df) < window * 3: return None
-    
-    # Simple logic: break of recent peak/trough
-    recent_high = df['high'].iloc[-window*2:-5].max()
-    recent_low = df['low'].iloc[-window*2:-5].min()
-    
-    current_close = df['close'].iloc[-1]
-    prev_close = df['close'].iloc[-2]
-    
-    if current_close > recent_high and prev_close <= recent_high:
-        return 'BULLISH_BREAK'
-    elif current_close < recent_low and prev_close >= recent_low:
-        return 'BEARISH_BREAK'
-        
-    return None
 
 def detect_liquidity_sweep(df, window=20):
     """
@@ -151,15 +43,9 @@ def detect_liquidity_sweep(df, window=20):
     current_close = df['close'].iloc[-1]
 
     if current_low < last_low and current_close > last_low:
-        return {
-            'type': 'BULLISH_SWEEP',
-            'time': df['time'].iloc[-1] if 'time' in df.columns else len(df)-1
-        }
+        return 'BULLISH_SWEEP'
     elif current_high > last_high and current_close < last_high:
-        return {
-            'type': 'BEARISH_SWEEP',
-            'time': df['time'].iloc[-1] if 'time' in df.columns else len(df)-1
-        }
+        return 'BEARISH_SWEEP'
     return None
 
 def calculate_zscore(series, window=50):
@@ -295,28 +181,3 @@ def has_rejection_wick(df, direction='BUY', wick_ratio=0.5):
     else:
         upper_wick = candle['high'] - max(candle['open'], candle['close'])
         return upper_wick >= (total_range * wick_ratio)
-
-def is_overlap_session():
-    """
-    Checks if current UTC time is within the London/NY overlap (12:00 - 16:00 UTC).
-    Highly liquid hours for EUR, GBP, USD.
-    """
-    import datetime
-    now_utc = datetime.datetime.now(datetime.timezone.utc).time()
-    start = datetime.time(12, 0)
-    end = datetime.time(16, 0)
-    return start <= now_utc <= end
-
-def is_low_volatility(df, window=24, multiplier=0.7):
-    """
-    Detects if the market is too slow/dead.
-    Returns True if current ATR is significantly lower than average ATR.
-    """
-    if len(df) < window * 2: return False
-    
-    current_atr = calculate_atr(df, period=14)
-    # Calculate rolling ATR average
-    tr = (df['high'] - df['low']).abs() # Simplified TR
-    avg_tr = tr.rolling(window=window).mean().iloc[-1]
-    
-    return current_atr < (avg_tr * multiplier)

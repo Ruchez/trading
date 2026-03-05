@@ -7,10 +7,11 @@ class TradeManager:
     Advanced Trade Management for V5.
     Handles dynamic trailing, regime-aware exits, and pyramid execution.
     """
-    def __init__(self, config, bridge, notifier):
+    def __init__(self, config, bridge, notifier, trade_db=None):
         self.config = config
         self.bridge = bridge
         self.notifier = notifier
+        self.trade_db = trade_db
 
     def manage_open_positions(self, positions, strategies, regime_engine):
         """
@@ -31,6 +32,13 @@ class TradeManager:
             if should_exit:
                 if self.bridge.close_position(pos.ticket):
                     self.notifier.send_message(f"🏃 *{symbol} Early Exit*\nReason: {reason}")
+                    if self.trade_db:
+                        self.trade_db.log_trade_exit(
+                            ticket=pos.ticket,
+                            exit_price=pos.price_current,
+                            pnl=pos.profit + pos.commission + pos.swap,
+                            exit_reason=reason
+                        )
                 continue
 
             # 2. Advanced Trailing / BE Logic
@@ -83,24 +91,15 @@ class TradeManager:
         if r_multiple >= 1.5:
             atr = calculate_atr(mtf_data['M15'])
             
-            # War Room Specific Refinement
+            # War Room Specific: Ultra-tight trailing (0.5x ATR)
             is_war_room = self.config.get('mode') == 'WAR_ROOM'
+            mult = 0.5 if is_war_room else 1.5
             
-            # User Rule: At +3R -> Lock 50% profit (aggressive move)
-            if is_war_room and r_multiple >= 3.0:
-                 # Calculate midpoint between entry and current
-                 new_sl = entry + (profit_dist * 0.5) if is_buy else entry - (profit_dist * 0.5)
-                 self.bridge.modify_position_sl(pos.ticket, new_sl)
-                 self.notifier.send_message(f"🏹 *{pos.symbol} War Lock (3.0R hit)*\nSecured 50% of explosive profit.")
-                 return
-
-            # User Rule: trail_distance = ATR(14) * 1.5
-            mult = 1.5 # Fixed as per War Room design request
             trail_dist = atr * mult
             
             new_sl = current - trail_dist if is_buy else current + trail_dist
             
-            # Ensure trail only moves in one direction
+            # Ensure trail only moves in one direction (improves)
             symbol_info = mt5.symbol_info(pos.symbol)
             if symbol_info:
                 if is_buy:

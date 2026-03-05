@@ -7,11 +7,11 @@
         "min_confluence_score": 3,
         "recovery_mode_threshold": 100.0,
         "focused_symbols": [
-            "XAUUSD.m",
-            "BTCUSD.m",
-            "EURUSD.m",
-            "USDJPY.m",
-            "AUDUSD.m"
+            "EURUSD_i",
+            "AUDUSD_i",
+            "EURCHF_i",
+            "EURGBP_i",
+            "USDCHF_i"
         ]
     },
     "risk_management": {
@@ -28,30 +28,40 @@
         "be_buffer_points": 5
     },
     "symbols": {
-        "XAUUSD.m": {
+        "EURUSD_i": {
             "enabled": true,
-            "mode": "v5",
-            "max_concurrent_trades": 2
-        },
-        "BTCUSD.m": {
-            "enabled": true,
-            "mode": "v5",
+            "mode": "smc_v6",
             "max_concurrent_trades": 1
         },
-        "EURUSD.m": {
-            "enabled": true,
-            "mode": "v5",
-            "max_concurrent_trades": 2
+        "USDJPY_i": {
+            "enabled": false,
+            "mode": "smc_v6",
+            "max_concurrent_trades": 1
         },
-        "USDJPY.m": {
+        "AUDUSD_i": {
             "enabled": true,
-            "mode": "v5",
-            "max_concurrent_trades": 2
+            "mode": "smc_v6",
+            "max_concurrent_trades": 1
         },
-        "AUDUSD.m": {
+        "EURCHF_i": {
             "enabled": true,
-            "mode": "v5",
-            "max_concurrent_trades": 2
+            "mode": "smc_v6",
+            "max_concurrent_trades": 1
+        },
+        "EURGBP_i": {
+            "enabled": true,
+            "mode": "smc_v6",
+            "max_concurrent_trades": 1
+        },
+        "USDCHF_i": {
+            "enabled": true,
+            "mode": "smc_v6",
+            "max_concurrent_trades": 1
+        },
+        "BTCUSD": {
+            "enabled": false,
+            "mode": "smc_v6",
+            "max_concurrent_trades": 1
         }
     }
 }

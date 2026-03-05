@@ -18,6 +18,7 @@ from src.comms.command_service import TelegramCommander
 from src.utils.market_math import calculate_atr
 from src.utils.regime_engine import RegimeEngine
 from src.utils.sentiment_engine import SentimentEngine
+from src.utils.trade_db import TradeDB
 
 ACCOUNTS_FILE = os.path.join("config", "accounts.json")
 
@@ -26,8 +27,7 @@ def load_accounts():
         return []
     try:
         with open(ACCOUNTS_FILE, "r") as f:
-            accs = json.load(f)
-            return [a for a in accs if a.get('login') and str(a.get('login')) != '0']
+            return json.load(f)
     except:
         return []
 
@@ -49,6 +49,7 @@ commander = None
 trade_manager = None
 regime_engine = None
 sentiment_engine = None
+trade_db = None
 
 # Tracking
 last_signal_check = {}
@@ -129,14 +130,12 @@ def run_trading_cycle():
             
             # Sentiment check
             sentiment_boost = sentiment_engine.get_sentiment_boost(symbol)
+            signal, reasoning = strategy.check_signal(mtf_data, sentiment_boost, regime)
             
-            # Unpack signals (V5 supports custom SL/TP from strategy)
-            signal_result = strategy.check_signal(mtf_data, sentiment_boost, regime)
-            signal = signal_result[0]
-            reasoning = signal_result[1]
-            custom_sl = signal_result[2] if len(signal_result) > 2 else None
-            custom_tp = signal_result[3] if len(signal_result) > 3 else None
-            
+            # 💓 Verbose Brain Heartbeat (Every 1 minute per symbol)
+            pulse_msg = f"🧠 {symbol}: {reasoning}"
+            print(pulse_msg)
+
             if signal:
                 print(f"🎯 SIGNAL: {signal} {symbol}")
                 # Execute for ALL accounts
@@ -146,30 +145,47 @@ def run_trading_cycle():
                     
                     risk_engine = get_risk_engine(login)
                     
-                    # Custom War Room Capacity Check (Allow up to 3)
+                    # Custom War Room Lot Sizing
                     is_war_room = config.get('mode') == 'WAR_ROOM'
                     if is_war_room:
-                        current_pos = mt5.positions_get(symbol=symbol)
-                        if len(current_pos or []) >= 3:
-                            continue
-                        lot_size = 0.01 
+                        lot_size = 0.01 # Fixed for $100 experiment
                     else:
                         lot_size = risk_engine.calculate_lot_size(symbol, 1.0, 200)
                     
                     if not risk_engine.validate_portfolio_risk(symbol, 1.0): continue
                     
+                    # 🏁 DUPLICATE GUARD: Check if position for symbol is already open
+                    open_positions = mt5.positions_get(symbol=symbol)
+                    if open_positions:
+                        print(f"⏩ {symbol} Signal skipped: Position already open.")
+                        continue
+
                     tick = mt5.symbol_info_tick(symbol)
                     if not tick: continue
                     
+                    atr = calculate_atr(mtf_data['M15'])
                     entry = tick.ask if signal == 'BUY' else tick.bid
                     
-                    # Use strategy-provided SL/TP or fallback to ATR
-                    atr = calculate_atr(mtf_data['M15'])
-                    sl = custom_sl if custom_sl else (entry - (atr * 2) if signal == 'BUY' else entry + (atr * 2))
-                    tp = custom_tp if custom_tp else (entry + (atr * 5) if signal == 'BUY' else entry - (atr * 5))
+                    # Trailing logic is handled by TradeManager, but SL/TP are initial
+                    sl = entry - (atr * 2) if signal == 'BUY' else entry + (atr * 2)
+                    tp = entry + (atr * 5) if signal == 'BUY' else entry - (atr * 5)
                     
-                    if bridge.send_order(symbol, mt5.ORDER_TYPE_BUY if signal == 'BUY' else mt5.ORDER_TYPE_SELL, lot_size, sl=sl, tp=tp):
-                        notifier.send_message(f"🔥 [{login}] EXECUTED {signal} {symbol}\nReason: {reasoning}")
+                    result = bridge.send_order(symbol, mt5.ORDER_TYPE_BUY if signal == 'BUY' else mt5.ORDER_TYPE_SELL, lot_size, sl=sl, tp=tp)
+                    if result:
+                        notifier.send_message(f"🔥 [{login}] EXECUTED {signal} {symbol}")
+                        # 📝 DB LOGGING
+                        trade_db.log_trade_entry(
+                            ticket=result.order,
+                            symbol=symbol,
+                            direction='BUY' if signal == 'BUY' else 'SELL',
+                            entry_price=entry,
+                            sl=sl,
+                            tp=tp,
+                            lot_size=lot_size,
+                            regime=regime,
+                            atr=atr,
+                            strategy=strategy.name
+                        )
 
             last_signal_check[symbol] = time.time()
 
@@ -208,14 +224,9 @@ def main():
     
     bridge = MT5Bridge(config)
     
-    # 2. Bootstrapping connectivity (Preserved specific terminal path and login logic from Testing folder)
     terminal_path = r"C:\Program Files\MT5 Weltrade\terminal64.exe"
     accounts = load_accounts()
-    if not accounts:
-        print("❌ [CRITICAL] No accounts found in accounts.json")
-        return
-        
-    master = accounts[0]
+    master = accounts[0] if accounts else bridge.master_credentials
     master_login = int(master.get('login', 0))
     master_password = master.get('password', '')
     master_server = master.get('server', '')
@@ -238,13 +249,14 @@ def main():
         print(f"❌ [CRITICAL] Failed to initialize MT5: {mt5.last_error()}")
         return
     
-    trade_manager = TradeManager(config, bridge, notifier)
+    trade_db = TradeDB()
+    trade_manager = TradeManager(config, bridge, notifier, trade_db)
     regime_engine = RegimeEngine(config)
     sentiment_engine = SentimentEngine(config)
     
     accounts = load_accounts()
-    master_login_str = str(accounts[0]['login']) if accounts else str(bridge.master_credentials.get('login'))
-    commander = TelegramCommander(bridge, get_risk_engine(master_login_str), notifier)
+    master_login = str(accounts[0]['login']) if accounts else str(bridge.master_credentials.get('login'))
+    commander = TelegramCommander(bridge, get_risk_engine(master_login), notifier)
     
     # 2. CLASSIC SYMBOL SCANNING LOG
     focused_symbols = config.get('v5_settings', {}).get('focused_symbols', ["XAUUSD.m", "EURUSD.m"])
